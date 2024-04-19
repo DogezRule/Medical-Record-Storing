@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Medical Record</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Add Medical Record</h2>
+        <form method="POST" action="{{ url_for('add_record') }}">
+            <label for="name"><b>Name</b></label><br>
+            <input type="text" id="name" name="name" required><br>
+            <label for="age"><b>Age</b></label><br>
+            <input type="number" id="age" name="age" required><br>
+            <label for="blood_type"><b>Blood Type</b></label><br>
+            <input type="text" id="blood_type" name="blood_type" required><br>
+            <label for="allergies"><b>Allergies</b></label><br>
+            <input type="text" id="allergies" name="allergies"><br><br>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</body>
+</html>
