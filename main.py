@@ -1,93 +1,64 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-import csv
-import os
+from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
+
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
-# Define paths for CSV files
-USERS_CSV = 'users.csv'
-MEDICAL_INFO_CSV = 'medical_info.csv'
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://ian:ian@localhost:3306/db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
+# Define User and MedicalInfo models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
 
-# Function to create CSV files if they don't exist
-def create_csv_files():
-    if not os.path.exists(USERS_CSV):
-        with open(USERS_CSV, 'w', newline='') as csvfile:
-            fieldnames = ['id', 'username', 'password']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-    
-    if not os.path.exists(MEDICAL_INFO_CSV):
-        with open(MEDICAL_INFO_CSV, 'w', newline='') as csvfile:
-            fieldnames = ['id', 'user_id', 'name', 'age', 'blood_type', 'allergies']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
+class MedicalInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    blood_type = db.Column(db.String(10), nullable=False)
+    allergies = db.Column(db.String(255), nullable=False)
+    user = db.relationship('User', backref=db.backref('medical_info', lazy=True))
+
+# Create database tables
+with app.app_context():
+    db.create_all()
 
 # Function to authenticate user
 def authenticate_user(username, password):
-    with open(USERS_CSV, 'r', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row['username'] == username and row['password'] == password:
-                return row
-    return None
+    user = User.query.filter_by(username=username, password=password).first()
+    return user
 
-# Function to add user to the CSV file
+# Function to add user to the database
 def add_user(username, password):
-    with open(USERS_CSV, 'a', newline='') as csvfile:
-        fieldnames = ['id', 'username', 'password']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writerow({'id': get_next_id(USERS_CSV), 'username': username, 'password': password})
+    new_user = User(username=username, password=password)
+    db.session.add(new_user)
+    db.session.commit()
 
-# Function to add medical record to the CSV file
+# Function to add medical record to the database
 def add_medical_record(user_id, name, age, blood_type, allergies):
-    with open(MEDICAL_INFO_CSV, 'a', newline='') as csvfile:
-        fieldnames = ['id', 'user_id', 'name', 'age', 'blood_type', 'allergies']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writerow({'id': get_next_id(MEDICAL_INFO_CSV), 'user_id': user_id, 'name': name, 'age': age, 'blood_type': blood_type, 'allergies': allergies})
+    new_record = MedicalInfo(user_id=user_id, name=name, age=age, blood_type=blood_type, allergies=allergies)
+    db.session.add(new_record)
+    db.session.commit()
 
-
-# Function to update medical record in the CSV file
+# Function to update medical record in the database
 def update_medical_record(record_id, name, age, blood_type, allergies):
-    rows = []
-    with open(MEDICAL_INFO_CSV, 'r', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row['id'] == record_id:
-                row['name'] = name
-                row['age'] = age
-                row['blood_type'] = blood_type
-                row['allergies'] = allergies
-            rows.append(row)
-    with open(MEDICAL_INFO_CSV, 'w', newline='') as csvfile:
-        fieldnames = ['id', 'user_id', 'name', 'age', 'blood_type', 'allergies']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    record = MedicalInfo.query.get(record_id)
+    record.name = name
+    record.age = age
+    record.blood_type = blood_type
+    record.allergies = allergies
+    db.session.commit()
 
-# Function to retrieve medical record from the CSV file
+# Function to retrieve medical record from the database
 def get_medical_record(user_id):
-    with open(MEDICAL_INFO_CSV, 'r', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row['user_id'] == user_id:
-                return row
-    return None
-
-def get_next_id(csv_file):
-    try:
-        with open(csv_file, 'r', newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            max_id = 0
-            if any(reader):
-                max_id = max(int(row['id']) for row in reader)
-        return max_id + 1
-    except FileNotFoundError:
-        return 1
-
-
-
+    record = MedicalInfo.query.filter_by(user_id=user_id).first()
+    return record
 
 # Main route to handle login
 @app.route('/', methods=['GET', 'POST'])
@@ -97,7 +68,7 @@ def login():
         password = request.form['password']
         user = authenticate_user(username, password)
         if user:
-            session['user_id'] = user['id']
+            session['user_id'] = user.id
             session['username'] = username
             return redirect(url_for('add_record'))
         else:
@@ -146,7 +117,7 @@ def edit_record():
         age = request.form['age']
         blood_type = request.form['blood_type']
         allergies = request.form['allergies']
-        update_medical_record(record['id'], name, age, blood_type, allergies)
+        update_medical_record(record.id, name, age, blood_type, allergies)
         return redirect(url_for('view_record'))
     return render_template('edit_record.html', record=record)
 
@@ -163,5 +134,4 @@ def view_record():
         return "No medical record found for this user."
 
 if __name__ == "__main__":
-    create_csv_files()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=443, debug=True, ssl_context='adhoc')

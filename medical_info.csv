@@ -1,5 +1,6 @@
 id,user_id,name,age,blood_type,allergies
-1,1,Matheo,14,-O,"bad food, shellfish"
-1,2,Matheo,14,-O,"bad food, shellfish"
+1,1,Matheo,14,-O,bad food
+1,2,Matheo,14,-O,bad food
 2,4,test,16,A+,none
 3,5,test,87,O-,none
+4,6,Andrea,47,B+,Sulfa

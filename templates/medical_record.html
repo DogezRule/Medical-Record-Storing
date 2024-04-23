@@ -2,18 +2,24 @@
 <html>
 <head>
     <title>Medical Record</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>Medical Record</h2>
-    {% if record %}
-        <p>ID: {{ record['id'] }}</p>
-        <p>Name: {{ record['name'] }}</p>
-        <p>Age: {{ record['age'] }}</p>
-        <p>Blood Type: {{ record['blood_type'] }}</p>
-        <p>Allergies: {{ record['allergies'] }}</p>
-        <a href="{{ url_for('edit_record') }}">Edit Medical Record</a>
-    {% else %}
-        <p>No medical record found for this user.</p>
-    {% endif %}
+    <div class="container">
+        <h2>Medical Record</h2>
+        {% if record %}
+            <p><strong>ID:</strong> {{ record['id'] }}</p>
+            <p><strong>Name:</strong> {{ record['name'] }}</p>
+            <p><strong>Age:</strong> {{ record['age'] }}</p>
+            <p><strong>Blood Type:</strong> {{ record['blood_type'] }}</p>
+            <p><strong>Allergies:</strong> {{ record['allergies'] }}</p>
+            <a href="{{ url_for('edit_record') }}" class="button">Edit Medical Record</a>
+        {% else %}
+            <p>No medical record found for this user.</p>
+        {% endif %}
+    </div>
+    <footer>
+        <p>&copy; 2024 Health Records Inc.</p>
+    </footer>
 </body>
 </html>
